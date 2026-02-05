@@ -1,4 +1,10 @@
-module Main where
+module Main where    
+ 
+import ASCII
+import CamelRace
+import RaceTrack
+
+
 
 main :: IO ()
-main = putStrLn "Hello, Haskell!"
+main = renderTrack exampleTrack

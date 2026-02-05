@@ -1,9 +1,8 @@
 module Ranking (Ranking, fromList, toList, getFirst, getSecond, getLast) where
 
-import Color
 import Utility
 import qualified Data.Set as S
-import Data.List(last, nub)
+import Data.List(nub)
 
 newtype Ranking a = Ranking [a]
 

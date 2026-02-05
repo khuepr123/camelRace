@@ -1,4 +1,4 @@
-module EndBet (betEnd, EndBet, EndStack, EndStatus(EndWin, EndLose), redeem) where
+module EndBet (betEnd, EndBet, EndStack, EndStatus(EndWin, EndLose), redeem, newEndStack) where
 
 import Data.Map hiding (map, partition)
 import Data.List (partition)
