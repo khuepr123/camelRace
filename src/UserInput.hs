@@ -23,7 +23,7 @@ ensureInput action = do
       Left err -> do
           putStrLn err
           putStrLn "Try again:"
-          ensureInput action >>= deleteLastNLines 2
+          ensureInput action
 
       Right v -> return v
 

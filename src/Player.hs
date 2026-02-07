@@ -28,6 +28,9 @@ data Player = Player
     , remainingEndBet :: [Color]
     }
 
+instance Show Player where
+    show player = name player ++ ": " ++ show (wealth player) ++ " Coins"
+
 getName :: PlayerId -> PlayerBase -> Name
 getName pID = name . (! pID)
 

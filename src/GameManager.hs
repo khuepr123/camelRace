@@ -63,9 +63,12 @@ runFromPlayer pID = do
       Progressing -> getNextPlayer pID >>= runFromPlayer
 
 
+
 display :: StateT GameState IO ()
 display = do
+    playerBase <- gets (view players)
     lift clearScreenFull
+    lift (traverse print playerBase)
     track <- gets (fst . view randomTrack)
     lift $ print (trackToImage track)
     hall <- gets (view ticketHall)
@@ -105,8 +108,9 @@ initGameState = do
 
 newGame :: IO ()
 newGame = do
-    (result, _) <- initGameState >>= runStateT (runFromPlayer 0)
-    error "todo"
+    initGameState >>= runStateT (runFromPlayer 0 >> display)
+    pure ()
+    
 
 
 

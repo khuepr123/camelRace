@@ -135,17 +135,21 @@ play pID action = do
                 modify $ over players (getTicket ticket pID)
                 return (Ongoing, BoughtTicket color)
             Left err -> lift $ Left err
-      RollDice -> updateMayPID mayPID >> (,MovedCamel camel) <$> case resultTrack of
-                    Right newRandomTrack -> do
-                        modify $ set randomTrack newRandomTrack
-                        return Ongoing
-                    Left raceTrack -> do
-                        cleanupRound raceTrack
-                        return Ended
+      RollDice -> do
+                    addToPlayer pID
+                    updateMayPID mayPID 
+                    (,MovedCamel camel) <$> case resultTrack of
+                        Right newRandomTrack -> do
+                            modify $ set randomTrack newRandomTrack
+                            return Ongoing
+                        Left raceTrack -> do
+                            cleanupRound raceTrack
+                            return Ended
                     where (mayPID, resultTrack, camel) = roll (view randomTrack thisState) 
                           updateMayPID = \case
                             Nothing -> pure ()
-                            Just tilePID -> modify $ over players (updatePlayer tilePID (earn coinPerRoll))
+                            Just tilePID -> addToPlayer tilePID
+                          addToPlayer targetID = modify $ over players (updatePlayer targetID (earn coinPerRoll))
       PlaceSpectator tile spectator -> case changeSpectator tile spectator pID track of
                                          Right createdTrack -> do
                                              modify $ set randomTrack (createdTrack, moves)
