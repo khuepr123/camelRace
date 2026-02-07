@@ -1,22 +1,22 @@
 module RandomTrack where 
 
-import Color
-import Ranking
 import RaceTrack
 import Utility
 import System.Random
 import Control.Monad.State
+import Data.List.NonEmpty(NonEmpty(..), fromList)
 
 jumpRange :: (Int, Int)
 jumpRange = (1, 3)
 
-type RandomTrack = (RaceTrack, [MoveUnit])
+type RandomTrack = (RaceTrack, NonEmpty MoveUnit)
 
-roll :: RandomTrack -> Either RaceTrack (Maybe PlayerId, RandomTrack)
-roll (track, moves) = case moves of
-                        []            -> Left track
-                        move : others -> Right (mayPID, (updatedTrack, others))
-                                           where (mayPID, updatedTrack) = updateTrack move track
+roll :: RandomTrack -> (Maybe PlayerId, Either RaceTrack RandomTrack, Camel)
+roll (track, move :| moves) = (mayPID, ,camel) $ case moves of
+                        []                 -> Left updatedTrack
+                        otherMove : others -> Right (updatedTrack, otherMove :| others)
+    where (mayPID, updatedTrack) = updateTrack move track
+          camel = fst move
 
 
 randInRange :: (Int, Int) -> State StdGen Int
@@ -30,7 +30,7 @@ genMove camel = (camel,) <$> randInRange jumpRange
 genTrack :: State StdGen RandomTrack 
 genTrack = do
     moves <- mapM genMove allCamels
-    return (newTrack moves, [])
+    restock (newTrack moves)
 
 
 randomDrop :: [a] -> State StdGen [a]
@@ -46,7 +46,4 @@ restock track = do
     crazyDrop <- randomDrop crazys
     drops     <- randomDrop (normals ++ crazyDrop)
     moves <- mapM genMove drops
-    return (track, moves)
-
-getRanking :: RandomTrack -> Ranking Color
-getRanking = getRankingTrack . fst
+    return (track, fromList moves)

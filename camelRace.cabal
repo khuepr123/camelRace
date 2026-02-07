@@ -63,7 +63,8 @@ executable camelRace
     -- .hs or .lhs file containing the Main module.
 
     -- Modules included in this executable, other than Main.
-    -- other-modules:
+    other-modules: ASCII, CamelRace, Coin, Color, DrawLib, EndBet, Player, RaceTrack, RandomTrack, Ranking, Ticket, Utility, GameManager, UserInput
+	-- other-modules:
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -76,7 +77,8 @@ executable camelRace
 	   				, mtl
 					, vector
 	 				, lens
-	  				,
+	  				, transformers-either
+	   				, ansi-terminal
 
 
     -- Directories containing source files.
@@ -86,5 +88,5 @@ executable camelRace
 
     -- Base language which the package is written in.
     default-language: GHC2021
-	
+
 	ghc-options: -dynamic

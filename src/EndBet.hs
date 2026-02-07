@@ -13,6 +13,8 @@ data EndBet = EndBet
     }
 
 data EndStack = EndWinLose [EndBet] [EndBet]
+
+newEndStack :: EndStack
 newEndStack = EndWinLose [] []
 
 data EndStatus = EndWin | EndLose
@@ -30,7 +32,7 @@ loss :: [Int]
 loss = repeat (-1)
 
 redeemProfit :: [PlayerId] -> [Int] -> Map PlayerId Int
-redeemProfit players profit = fromListWith (+) (zip players profit)
+redeemProfit players profits = fromListWith (+) (zip players profits)
 
 redeemWithColor :: Color -> [EndBet] -> Map PlayerId Int
 redeemWithColor color bets =

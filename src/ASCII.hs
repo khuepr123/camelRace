@@ -3,6 +3,9 @@ module ASCII where
 import DrawLib
 import RaceTrack
 import Color
+import Ticket
+import Text.Printf (printf)
+import Data.Array (assocs)
 -- import Data.Array
 
 crazyCamelString :: [[Char]]
@@ -30,7 +33,14 @@ tileStringRight :: [[Char]]
 tileStringRight = [ ">>>>>>>"
                   ]
 
+card :: Int -> [[Char]]
+card val = [ printf "<━━━(%d)━━━>" val
+           ]
+
 type OutputColor = Maybe Camel
+
+instance Show (Pixel OutputColor) where
+    show (Pixel c color) = getCode color ++ [c] ++ getCode Nothing
 
 getCode :: OutputColor -> String
 getCode Nothing = "\ESC[0m"
@@ -39,9 +49,6 @@ getCode (Just camel) = getCodeCamel camel
 getCodeCamel :: Camel -> String 
 getCodeCamel (Normal nColor) = getCodeNormal nColor
 getCodeCamel (Crazy cColor) = getCodeCrazy cColor
-
-putCharColor :: OutputColor -> Char -> IO ()
-putCharColor color c = putStr $ getCode color ++ [c] ++ getCode Nothing
 
 emptyCanvas :: Image OutputColor
 emptyCanvas = convertToImage [] Nothing
@@ -59,20 +66,24 @@ showTile (Just (HasSpectator spectator _)) = overlay (showTile Nothing) $ shift 
                         Push -> tileStringRight
                         Pull -> tileStringLeft
 
-showTrack :: RaceTrack -> Image OutputColor
-showTrack trackMap = foldr (tileToLeft . showTile) emptyCanvas (trackToList trackMap)
+trackToImage :: RaceTrack -> Image OutputColor
+trackToImage trackMap = foldr (tileToLeft . showTile) emptyCanvas (trackToList trackMap)
     where tileToLeft :: Image a -> Image a -> Image a
           tileToLeft tile canvas = overlay tile (shift (0, 7) canvas)
 
-render :: Image OutputColor -> IO ()
-render image = mapM_ ((>> putStrLn "") . mapM_ putPixel) charLists
-    where putPixel :: Maybe (Pixel OutputColor) -> IO ()
-          putPixel Nothing = putChar ' '
-          putPixel (Just (Pixel chr color)) = putCharColor color chr
-          charLists = array2dToList image
+showDeck :: Color -> [Int] -> Image OutputColor
+showDeck normalColor = overlayAll . zipWith tag [4,3..] . reverse
+    where color = Just (Normal normalColor)
+          tag :: Int -> Int -> Image OutputColor
+          tag x val = shift (x, 0) $ convertToImage (card val) color
 
-renderTrack :: RaceTrack -> IO ()
-renderTrack = render . showTrack
+overlayAll :: [Image OutputColor] -> Image OutputColor
+overlayAll = foldr overlay emptyCanvas 
+
+ticketHallToImage :: TicketHall -> Image OutputColor
+ticketHallToImage = foldr (deckToLeft . uncurry showDeck) emptyCanvas . assocs
+    where deckToLeft :: Image a -> Image a -> Image a
+          deckToLeft deck canvas = overlay deck (shift (0, 11) canvas)
 
 -- 👑
 -- ▀█ ▅

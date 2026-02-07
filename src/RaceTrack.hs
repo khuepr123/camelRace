@@ -1,4 +1,4 @@
-module RaceTrack (Camel (Normal, Crazy), CrazyColor, allCamels, RaceTrack, MoveUnit, Spectator(Push, Pull), newTrack, updateTrack, getRankingTrack, changeSpectator, deleteSpectator, ongoing, Tile, trackRange, TileStatus(..), trackToList, exampleTrack, clearSpectator, isEnded, GameStatus(..)) where
+module RaceTrack (Camel (Normal, Crazy), CrazyColor, allCamels, RaceTrack, MoveUnit, Spectator(Push, Pull), newTrack, updateTrack, getRanking, changeSpectator, deleteSpectator, ongoing, Tile, trackRange, TileStatus(..), trackToList, exampleTrack, clearSpectator, isEnded, GameStatus(..)) where
 
 import Data.Ix (inRange, range)
 import Ranking (Ranking)
@@ -106,8 +106,8 @@ deleteSpectator pID = Mp.mapMaybe killSpec
     where killSpec (HasSpectator _ x) | x == pID = Nothing
           killSpec leftover = Just leftover
 
-getRankingTrack :: RaceTrack -> Ranking Color
-getRankingTrack = Rk.fromList . reverse . foldMap getOnlyColor
+getRanking :: RaceTrack -> Ranking Color
+getRanking = Rk.fromList . reverse . foldMap getOnlyColor
     where getOnlyColor (HasSpectator _ _) = []
           getOnlyColor (HasCamel camels) = mapMaybe selectGoodColor camels
           selectGoodColor (Crazy _) = Nothing

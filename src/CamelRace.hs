@@ -1,8 +1,8 @@
-{-# LANGUAGE TemplateHaskell #-}
-  
-module CamelRace (Action(..), RoundStatus(..), play, getNextPlayer, GameState, gameEnded, newGameState) where
+{-# LANGUAGE TemplateHaskell, LambdaCase #-}
 
-import EndBet;
+module CamelRace where
+
+import EndBet
 import Player
 import RaceTrack
 import RandomTrack
@@ -27,23 +27,28 @@ data Action = BetWinOverall Color | BetLoseOverall Color | BuyTicket Color | Rol
 --     show RollDice = "Roll the dice"
 --     show PlaceSpectator = "Place a spectator tile"
 
-data GameState = GameState 
+data Event = EndBetted EndStatus | MovedCamel Camel 
+  | NoEvent | PlacedSpectator Tile | BoughtTicket Color
+
+data GameState = GameState
     { _ticketHall :: TicketHall
     , _players :: PlayerBase
     , _endStack :: EndStack
     , _randomTrack :: RandomTrack
     , _seed :: StdGen
+    , _events :: [Event]
     }
 
 $(makeLenses ''GameState)
 
 newGameState :: [Name] -> StdGen -> GameState
-newGameState names rngSeed = 
+newGameState names rngSeed =
     GameState { _ticketHall  = newTicketHall
               , _players     = newPlayerBase names
               , _endStack    = newEndStack
               , _randomTrack = createdTrack
               , _seed        = newSeed
+              , _events      = []
               }
                   where (createdTrack, newSeed) = runState genTrack rngSeed
 
@@ -64,6 +69,17 @@ gameEnded = gets (isEnded . fst . view randomTrack)
 
 data RoundStatus = Ended | Ongoing
 
+instance Show Event where
+    show (EndBetted stat) = ""
+    show (MovedCamel camel) = "the " ++ showCamel camel ++ " camel moved"
+        where showCamel (Normal color) = show color
+              showCamel (Crazy color) = show color
+    show NoEvent = ""
+    show (PlacedSpectator tile) = "A new spectator tile was placed on tile " ++ show tile
+    show (BoughtTicket color) = "" 
+    
+    
+
 -- set is just over with const
 
 -- withRNG :: State StdGen a -> StateT GameState (Either String) a
@@ -77,23 +93,39 @@ withRNG gen = do
 
 cleanupRound :: MonadState GameState m => RaceTrack -> m ()
 cleanupRound raceTrack = do
-    ranking <- gets $ getRanking . view randomTrack
     modify $ over players (cashOut ranking)
     -- TODO: clean all spectator
     --
     restocked <- withRNG . restock . clearSpectator $ raceTrack
     modify $ set randomTrack restocked
-    
+
     modify $ set ticketHall newTicketHall
-    
-    
-coinPerRoll :: Int    
+        where ranking = getRanking raceTrack
+
+
+cleanupGame :: MonadState GameState m => m PlayerBase
+cleanupGame = do
+    raceTrack <- gets (fst . view randomTrack)
+    cleanupRound raceTrack
+
+    playerBase :: PlayerBase <- gets (view players)
+    lastBets :: EndStack <- gets (view endStack)
+    return $ cashAll (getRanking raceTrack) lastBets playerBase
+
+
+
+
+
+
+coinPerRoll :: Int
 coinPerRoll = 1
+
+
 
 play :: PlayerId -> Action -> StateT GameState (Either String) RoundStatus
 play pID action = do
     thisState <- get
-    case action of
+    (roundStatus, event) <- case action of
       BetWinOverall color -> betEndWith color EndWin thisState
       BetLoseOverall color -> betEndWith color EndLose thisState
       BuyTicket color ->
@@ -101,31 +133,31 @@ play pID action = do
             Right (ticket, updatedTicketHall) -> do
                 modify $ set ticketHall updatedTicketHall
                 modify $ over players (getTicket ticket pID)
-                return Ongoing
+                return (Ongoing, BoughtTicket color)
             Left err -> lift $ Left err
-      RollDice -> case roll (view randomTrack thisState) of
-                    Right (mayPID, newRandomTrack) -> do
+      RollDice -> updateMayPID mayPID >> (,MovedCamel camel) <$> case resultTrack of
+                    Right newRandomTrack -> do
                         modify $ set randomTrack newRandomTrack
-                        case mayPID of
-                          Nothing -> pure ()
-                          Just tilePID -> modify $ over players (updatePlayer tilePID (earn coinPerRoll))
                         return Ongoing
                     Left raceTrack -> do
                         cleanupRound raceTrack
                         return Ended
+                    where (mayPID, resultTrack, camel) = roll (view randomTrack thisState) 
+                          updateMayPID = \case
+                            Nothing -> pure ()
+                            Just tilePID -> modify $ over players (updatePlayer tilePID (earn coinPerRoll))
       PlaceSpectator tile spectator -> case changeSpectator tile spectator pID track of
                                          Right createdTrack -> do
                                              modify $ set randomTrack (createdTrack, moves)
-                                             return Ongoing
+                                             return (Ongoing, PlacedSpectator tile)
                                          Left err -> lift $ Left err
           where (track, moves) = view randomTrack thisState
-
-    where betEndWith color endStatus thisState = 
+    modify $ over events (event:)
+    return roundStatus
+    where betEndWith color endStatus thisState =
               case tryBetEnd pID color endStatus (view players thisState, view endStack thisState) of
                 Right (newPlayers, createdEndStack) -> do
                     modify $ set players newPlayers
                     modify $ set endStack createdEndStack
-                    return Ongoing
+                    return (Ongoing, EndBetted endStatus)
                 Left err -> lift $ Left err
-
-

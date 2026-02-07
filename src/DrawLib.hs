@@ -1,12 +1,22 @@
+-- {-# LANGUAGE OverlappingInstances, FlexibleInstances #-}
+
 module DrawLib where
 
 import Data.Array (Array, (!))
 import qualified Data.Array as A
+import Data.List (intercalate)
 
 
 data Pixel a = Pixel Char a
 type Coord = (Int, Int)
 type Image a = Array Coord (Maybe (Pixel a))
+
+instance {-# OVERLAPPING #-} Show (Pixel a) => Show (Image a) where
+    show image = intercalate "\n" (map (concatMap showMPixel) charLists)
+        where showMPixel :: Maybe (Pixel a) -> String
+              showMPixel Nothing = " "
+              showMPixel (Just px) = show px
+              charLists = array2dToList image
 
 array2dToList :: Array Coord a -> [[a]]
 array2dToList arr = 

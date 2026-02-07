@@ -28,6 +28,9 @@ data Player = Player
     , remainingEndBet :: [Color]
     }
 
+getName :: PlayerId -> PlayerBase -> Name
+getName pID = name . (! pID)
+
 findAndRemove :: Eq a => a -> [a] -> Maybe [a]
 findAndRemove x l
   | x `elem` l = Just (delete x l)
